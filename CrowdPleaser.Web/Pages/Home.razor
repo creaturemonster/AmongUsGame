@@ -1,0 +1,166 @@
+@page "/"
+@using CrowdPleaser.Logic
+@using System.Timers
+@implements IDisposable
+@inject IJSRuntime JS
+
+<PageTitle>CrowdPleaser</PageTitle>
+
+<div tabindex="0" @ref="gameContainer" @onkeydown="HandleKeyDown" class="game-container">
+    <h1>CrowdPleaser</h1>
+    <p>Use Arrow Keys to move the green Player into the yellow Spotlight!</p>
+
+    @if (game != null)
+    {
+        <div class="stats">
+            <span>Audience: @(new string('♥', game.Lives))@(new string('♡', 5 - game.Lives))</span> |
+            <span>Time in Spotlight: @game.TimeInSpotlight.ToString("F1") / 30.0 s</span> |
+            <span>Time Out: @game.TimeOutOfSpotlight.ToString("F1") s (loss at 3s)</span>
+        </div>
+
+        @if (game.CurrentState == GameState.Playing)
+        {
+            <div class="grid">
+                @for (int y = 0; y < game.Height; y++)
+                {
+                    <div class="row">
+                        @for (int x = 0; x < game.Width; x++)
+                        {
+                            var sX = (int)Math.Round(game.SpotlightX);
+                            var sY = (int)Math.Round(game.SpotlightY);
+                            bool isSpotlight = Math.Abs(x - sX) <= 1 && Math.Abs(y - sY) <= 1;
+                            bool isPlayer = (x == game.PlayerX && y == game.PlayerY);
+
+                            string cellClass = "cell";
+                            if (isSpotlight) cellClass += " spotlight";
+                            if (isPlayer) cellClass += " player";
+
+                            <div class="@cellClass">@(isPlayer ? "P" : "")</div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else if (game.CurrentState == GameState.Win)
+        {
+            <div class="alert alert-success">
+                <h2>YOU WIN!</h2>
+                <p>You kept the crowd pleased!</p>
+                <button class="btn btn-primary" @onclick="RestartGame">Play Again</button>
+            </div>
+        }
+        else if (game.CurrentState == GameState.Loss)
+        {
+            <div class="alert alert-danger">
+                <h2>GAME OVER!</h2>
+                <p>All audience members left.</p>
+                <button class="btn btn-primary" @onclick="RestartGame">Play Again</button>
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .game-container {
+        outline: none; /* Hide focus outline */
+        font-family: monospace;
+    }
+    .stats {
+        margin-bottom: 10px;
+        font-weight: bold;
+    }
+    .grid {
+        display: flex;
+        flex-direction: column;
+        background-color: #111;
+        width: fit-content;
+        border: 2px solid #555;
+    }
+    .row {
+        display: flex;
+    }
+    .cell {
+        width: 15px;
+        height: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    .spotlight {
+        background-color: #bb8d00;
+    }
+    .player {
+        color: #00ff00;
+    }
+</style>
+
+@code {
+    private SpotlightGameLogic? game;
+    private Timer? timer;
+    private ElementReference gameContainer;
+    private DateTime lastUpdateTime;
+
+    protected override void OnInitialized()
+    {
+        RestartGame();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Focus the div so it can receive keyboard events immediately
+            await gameContainer.FocusAsync();
+        }
+    }
+
+    private void RestartGame()
+    {
+        game = new SpotlightGameLogic(40, 20);
+        lastUpdateTime = DateTime.Now;
+
+        if (timer != null)
+        {
+            timer.Stop();
+            timer.Dispose();
+        }
+
+        timer = new Timer(33); // ~30 fps
+        timer.Elapsed += GameLoop;
+        timer.AutoReset = true;
+        timer.Enabled = true;
+    }
+
+    private void GameLoop(object? sender, ElapsedEventArgs e)
+    {
+        if (game == null || game.CurrentState != GameState.Playing) return;
+
+        var now = DateTime.Now;
+        var dt = (now - lastUpdateTime).TotalSeconds;
+        lastUpdateTime = now;
+
+        game.Update(dt);
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (game == null || game.CurrentState != GameState.Playing) return;
+
+        if (e.Key == "ArrowUp" || e.Key == "w") game.MovePlayer(Direction.Up);
+        if (e.Key == "ArrowDown" || e.Key == "s") game.MovePlayer(Direction.Down);
+        if (e.Key == "ArrowLeft" || e.Key == "a") game.MovePlayer(Direction.Left);
+        if (e.Key == "ArrowRight" || e.Key == "d") game.MovePlayer(Direction.Right);
+    }
+
+    public void Dispose()
+    {
+        if (timer != null)
+        {
+            timer.Stop();
+            timer.Dispose();
+        }
+    }
+}
