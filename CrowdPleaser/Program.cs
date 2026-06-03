@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
+using CrowdPleaser.Logic;
 
 namespace CrowdPleaser
 {
@@ -26,29 +27,12 @@ namespace CrowdPleaser
 
         static void PlayGame()
         {
-            int width = 40;
-            int height = 20;
-
-            int playerX = width / 2;
-            int playerY = height / 2;
-
-            double spotlightX = width / 2;
-            double spotlightY = height / 2;
-
-            double targetSpotlightX = spotlightX;
-            double targetSpotlightY = spotlightY;
-
-            int lives = 5;
-            double timeInSpotlight = 0;
-            double timeOutOfSpotlight = 0;
+            var game = new SpotlightGameLogic();
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            Random rnd = new Random();
-
             double lastFrameTime = sw.Elapsed.TotalSeconds;
-            double spotlightChangeTimer = 0;
 
             Console.Clear();
 
@@ -62,70 +46,33 @@ namespace CrowdPleaser
                 while (Console.KeyAvailable)
                 {
                     var key = Console.ReadKey(true).Key;
-                    if (key == ConsoleKey.UpArrow && playerY > 0) playerY--;
-                    if (key == ConsoleKey.DownArrow && playerY < height - 1) playerY++;
-                    if (key == ConsoleKey.LeftArrow && playerX > 0) playerX--;
-                    if (key == ConsoleKey.RightArrow && playerX < width - 1) playerX++;
+                    if (key == ConsoleKey.UpArrow) game.MovePlayer(Direction.Up);
+                    if (key == ConsoleKey.DownArrow) game.MovePlayer(Direction.Down);
+                    if (key == ConsoleKey.LeftArrow) game.MovePlayer(Direction.Left);
+                    if (key == ConsoleKey.RightArrow) game.MovePlayer(Direction.Right);
                 }
 
-                // Spotlight Logic
-                spotlightChangeTimer -= dt;
-                if (spotlightChangeTimer <= 0)
-                {
-                    targetSpotlightX = rnd.Next(2, width - 2);
-                    targetSpotlightY = rnd.Next(2, height - 2);
-                    spotlightChangeTimer = rnd.NextDouble() * 1.5 + 0.5; // Change target every 0.5 to 2.0 seconds
-                }
-
-                // Move spotlight towards target
-                double dx = targetSpotlightX - spotlightX;
-                double dy = targetSpotlightY - spotlightY;
-                double dist = Math.Sqrt(dx * dx + dy * dy);
-                if (dist > 0.5)
-                {
-                    double speed = 10.0; // Spotlight speed
-                    spotlightX += (dx / dist) * speed * dt;
-                    spotlightY += (dy / dist) * speed * dt;
-                }
-
-                // Check if player is in spotlight
-                // Spotlight is a 3x3 area centered at (spotlightX, spotlightY)
-                int sX = (int)Math.Round(spotlightX);
-                int sY = (int)Math.Round(spotlightY);
-
-                bool inSpotlight = Math.Abs(playerX - sX) <= 1 && Math.Abs(playerY - sY) <= 1;
-
-                if (inSpotlight)
-                {
-                    timeInSpotlight += dt;
-                    timeOutOfSpotlight = 0; // reset out of spotlight time
-                }
-                else
-                {
-                    timeOutOfSpotlight += dt;
-                    if (timeOutOfSpotlight >= 3.0)
-                    {
-                        lives--;
-                        timeOutOfSpotlight = 0; // reset so another doesn't leave immediately
-                    }
-                }
+                game.Update(dt);
 
                 // Draw
                 // We use SetCursorPosition to avoid clear flicker
                 Console.SetCursorPosition(0, 0);
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.BackgroundColor = ConsoleColor.Black;
-                Console.WriteLine($"Audience: {new string('♥', lives)}{new string(' ', 5 - lives)}   ");
-                Console.WriteLine($"Time in Spotlight: {timeInSpotlight:F1} / 30.0 s   ");
-                Console.WriteLine($"Time Out (loss at 3s): {timeOutOfSpotlight:F1} s   ");
-                Console.WriteLine(new string('-', width));
+                Console.WriteLine($"Audience: {new string('♥', game.Lives)}{new string(' ', 5 - game.Lives)}   ");
+                Console.WriteLine($"Time in Spotlight: {game.TimeInSpotlight:F1} / 30.0 s   ");
+                Console.WriteLine($"Time Out (loss at 3s): {game.TimeOutOfSpotlight:F1} s   ");
+                Console.WriteLine(new string('-', game.Width));
 
-                for (int y = 0; y < height; y++)
+                int sX = (int)Math.Round(game.SpotlightX);
+                int sY = (int)Math.Round(game.SpotlightY);
+
+                for (int y = 0; y < game.Height; y++)
                 {
-                    for (int x = 0; x < width; x++)
+                    for (int x = 0; x < game.Width; x++)
                     {
                         bool isSpotlight = Math.Abs(x - sX) <= 1 && Math.Abs(y - sY) <= 1;
-                        bool isPlayer = (x == playerX && y == playerY);
+                        bool isPlayer = (x == game.PlayerX && y == game.PlayerY);
 
                         if (isSpotlight)
                         {
@@ -149,10 +96,10 @@ namespace CrowdPleaser
                     Console.BackgroundColor = ConsoleColor.Black;
                     Console.WriteLine();
                 }
-                Console.WriteLine(new string('-', width));
+                Console.WriteLine(new string('-', game.Width));
 
                 // Check Win/Loss
-                if (lives <= 0)
+                if (game.CurrentState == GameState.Loss)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("GAME OVER! All audience members left.        ");
@@ -160,7 +107,7 @@ namespace CrowdPleaser
                     break;
                 }
 
-                if (timeInSpotlight >= 30.0)
+                if (game.CurrentState == GameState.Win)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("YOU WIN! You kept the crowd pleased!         ");
