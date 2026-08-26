@@ -106,12 +106,17 @@ namespace CrowdPleaser
             }
         }
 
+        private bool IsPointInSpotlight(int x, int y, int sX, int sY)
+        {
+            return Math.Abs(x - sX) <= 1 && Math.Abs(y - sY) <= 1;
+        }
+
         public void CheckSpotlight(double dt)
         {
             int sX = (int)Math.Round(SpotlightX);
             int sY = (int)Math.Round(SpotlightY);
 
-            bool inSpotlight = Math.Abs(PlayerX - sX) <= 1 && Math.Abs(PlayerY - sY) <= 1;
+            bool inSpotlight = IsPointInSpotlight(PlayerX, PlayerY, sX, sY);
 
             if (inSpotlight)
             {
@@ -147,7 +152,7 @@ namespace CrowdPleaser
             {
                 for (int x = 0; x < Width; x++)
                 {
-                    bool isSpotlight = Math.Abs(x - sX) <= 1 && Math.Abs(y - sY) <= 1;
+                    bool isSpotlight = IsPointInSpotlight(x, y, sX, sY);
                     bool isPlayer = (x == PlayerX && y == PlayerY);
 
                     if (isSpotlight)
