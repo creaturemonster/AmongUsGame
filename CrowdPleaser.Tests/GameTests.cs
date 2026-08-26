@@ -180,6 +180,29 @@ namespace CrowdPleaser.Tests
         }
 
         [Fact]
+        public void CheckSpotlight_ReenteringSpotlight_ResetsTimeOutOfSpotlight()
+        {
+            var console = new MockConsole();
+            var game = new Game(console, new MockRandom(), new MockGameLoop());
+
+            // Move player out of spotlight (spotlight is at 20, 10)
+            for (int i = 0; i < 5; i++)
+                console.Keys.Enqueue(new ConsoleKeyInfo('\0', ConsoleKey.LeftArrow, false, false, false));
+            game.HandleInput();
+
+            game.CheckSpotlight(1.5);
+            Assert.Equal(1.5, game.TimeOutOfSpotlight);
+
+            // Move player back into spotlight
+            for (int i = 0; i < 5; i++)
+                console.Keys.Enqueue(new ConsoleKeyInfo('\0', ConsoleKey.RightArrow, false, false, false));
+            game.HandleInput();
+
+            game.CheckSpotlight(1.0);
+            Assert.Equal(0.0, game.TimeOutOfSpotlight); // Should be reset to 0
+        }
+
+        [Fact]
         public void Update_WinCondition()
         {
             var console = new MockConsole();
