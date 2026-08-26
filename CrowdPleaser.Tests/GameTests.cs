@@ -29,6 +29,8 @@ namespace CrowdPleaser.Tests
         public double NextDoubleValue { get; set; } = 1.0;
 
         private int _callCount = 0;
+        public int CallCount => _callCount;
+
         public int Next(int minValue, int maxValue)
         {
             _callCount++;
@@ -122,6 +124,28 @@ namespace CrowdPleaser.Tests
 
             Assert.Equal(39, game.PlayerX);
             Assert.Equal(19, game.PlayerY);
+        }
+
+        [Fact]
+        public void UpdateSpotlight_DoesNotChangeTarget_WhenTimerGreaterThanZero()
+        {
+            var random = new MockRandom { NextDoubleValue = 1.0 }; // Timer will be set to 2.0s
+            var game = new Game(new MockConsole(), random, new MockGameLoop());
+
+            // First call triggers target change and sets timer to 2.0s
+            game.UpdateSpotlight(0.1);
+
+            double firstTargetX = game.TargetSpotlightX;
+            double firstTargetY = game.TargetSpotlightY;
+            int initialCallCount = random.CallCount;
+
+            // Call again with dt = 1.0, timer becomes 1.0s (> 0)
+            game.UpdateSpotlight(1.0);
+
+            // Verify targets did not change and Next was not called again
+            Assert.Equal(firstTargetX, game.TargetSpotlightX);
+            Assert.Equal(firstTargetY, game.TargetSpotlightY);
+            Assert.Equal(initialCallCount, random.CallCount);
         }
 
         [Fact]
