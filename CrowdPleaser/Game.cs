@@ -27,6 +27,8 @@ namespace CrowdPleaser
         public bool IsGameOver => Lives <= 0;
         public bool IsWin => TimeInSpotlight >= 30.0;
 
+        private readonly string _horizontalBorder;
+
         public Game(IConsole console, IRandom random, IGameLoop loop)
         {
             _console = console;
@@ -39,6 +41,8 @@ namespace CrowdPleaser
             SpotlightY = Height / 2;
             TargetSpotlightX = SpotlightX;
             TargetSpotlightY = SpotlightY;
+
+            _horizontalBorder = new string('-', Width);
         }
 
         public void Play()
@@ -138,7 +142,7 @@ namespace CrowdPleaser
             _console.WriteLine($"Audience: {new string('♥', displayLives)}{new string(' ', 5 - displayLives)}   ");
             _console.WriteLine($"Time in Spotlight: {TimeInSpotlight:F1} / 30.0 s   ");
             _console.WriteLine($"Time Out (loss at 3s): {TimeOutOfSpotlight:F1} s   ");
-            _console.WriteLine(new string('-', Width));
+            _console.WriteLine(_horizontalBorder);
 
             int sX = (int)Math.Round(SpotlightX);
             int sY = (int)Math.Round(SpotlightY);
@@ -172,7 +176,7 @@ namespace CrowdPleaser
                 _console.BackgroundColor = ConsoleColor.Black;
                 _console.WriteLine();
             }
-            _console.WriteLine(new string('-', Width));
+            _console.WriteLine(_horizontalBorder);
         }
     }
 }
