@@ -19,13 +19,17 @@ namespace CrowdPleaser
         public double TargetSpotlightX { get; private set; }
         public double TargetSpotlightY { get; private set; }
 
-        public int Lives { get; private set; } = 5;
+        private const int InitialLives = 5;
+        private const double WinTimeRequired = 30.0;
+        private const double TimeOutThreshold = 3.0;
+
+        public int Lives { get; private set; } = InitialLives;
         public double TimeInSpotlight { get; private set; } = 0;
         public double TimeOutOfSpotlight { get; private set; } = 0;
         public double SpotlightChangeTimer { get; private set; } = 0;
 
         public bool IsGameOver => Lives <= 0;
-        public bool IsWin => TimeInSpotlight >= 30.0;
+        public bool IsWin => TimeInSpotlight >= WinTimeRequired;
 
         public Game(IConsole console, IRandom random, IGameLoop loop)
         {
@@ -121,7 +125,7 @@ namespace CrowdPleaser
             else
             {
                 TimeOutOfSpotlight += dt;
-                if (TimeOutOfSpotlight >= 3.0)
+                if (TimeOutOfSpotlight >= TimeOutThreshold)
                 {
                     Lives--;
                     TimeOutOfSpotlight = 0;
@@ -135,9 +139,9 @@ namespace CrowdPleaser
             _console.ForegroundColor = ConsoleColor.White;
             _console.BackgroundColor = ConsoleColor.Black;
             int displayLives = Math.Max(0, Lives);
-            _console.WriteLine($"Audience: {new string('♥', displayLives)}{new string(' ', 5 - displayLives)}   ");
-            _console.WriteLine($"Time in Spotlight: {TimeInSpotlight:F1} / 30.0 s   ");
-            _console.WriteLine($"Time Out (loss at 3s): {TimeOutOfSpotlight:F1} s   ");
+            _console.WriteLine($"Audience: {new string('♥', displayLives)}{new string(' ', InitialLives - displayLives)}   ");
+            _console.WriteLine($"Time in Spotlight: {TimeInSpotlight:F1} / {WinTimeRequired:F1} s   ");
+            _console.WriteLine($"Time Out (loss at {TimeOutThreshold:F0}s): {TimeOutOfSpotlight:F1} s   ");
             _console.WriteLine(new string('-', Width));
 
             int sX = (int)Math.Round(SpotlightX);
