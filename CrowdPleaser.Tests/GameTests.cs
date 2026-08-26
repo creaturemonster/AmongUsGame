@@ -100,6 +100,24 @@ namespace CrowdPleaser.Tests
         }
 
         [Fact]
+        public void HandleInput_UnmappedKey_IgnoresInput()
+        {
+            var console = new MockConsole();
+            var game = new Game(console, new MockRandom(), new MockGameLoop());
+
+            int initialX = game.PlayerX;
+            int initialY = game.PlayerY;
+
+            console.Keys.Enqueue(new ConsoleKeyInfo(' ', ConsoleKey.Spacebar, false, false, false));
+            console.Keys.Enqueue(new ConsoleKeyInfo('a', ConsoleKey.A, false, false, false));
+
+            game.HandleInput();
+
+            Assert.Equal(initialX, game.PlayerX);
+            Assert.Equal(initialY, game.PlayerY);
+        }
+
+        [Fact]
         public void HandleInput_RespectsBounds()
         {
             var console = new MockConsole();
