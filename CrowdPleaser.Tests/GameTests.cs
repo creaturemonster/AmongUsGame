@@ -16,11 +16,14 @@ namespace CrowdPleaser.Tests
 
         public ConsoleKeyInfo ReadKey(bool intercept) => Keys.Dequeue();
 
+        public List<string> WrittenLines = new List<string>();
+        public List<string> WrittenStrings = new List<string>();
+
         public void Clear() {}
         public void SetCursorPosition(int left, int top) {}
-        public void WriteLine(string value) {}
-        public void WriteLine() {}
-        public void Write(string value) {}
+        public void WriteLine(string value) => WrittenLines.Add(value);
+        public void WriteLine() => WrittenLines.Add("");
+        public void Write(string value) => WrittenStrings.Add(value);
     }
 
     public class MockRandom : IRandom
@@ -236,6 +239,50 @@ namespace CrowdPleaser.Tests
             game.Play();
 
             Assert.Equal(5, loop.IterationCount);
+        }
+
+        [Fact]
+        public void Draw_OutputsCorrectUI()
+        {
+            var console = new MockConsole();
+            var game = new Game(console, new MockRandom(), new MockGameLoop());
+
+            // Add some time in spotlight to test formatting
+            game.CheckSpotlight(1.5);
+
+            game.Draw();
+
+            // First few lines should be status
+            Assert.Contains(console.WrittenLines, l => l.Contains("Audience: ♥♥♥♥♥"));
+            Assert.Contains(console.WrittenLines, l => l.Contains("Time in Spotlight: 1.5 / 30.0 s"));
+            Assert.Contains(console.WrittenLines, l => l.Contains("Time Out (loss at 3s): 0.0 s"));
+
+            // Contains player marker
+            Assert.Contains(console.WrittenStrings, s => s == "P");
+        }
+
+        [Fact]
+        public void Draw_WithNegativeLives_DisplaysZeroHearts()
+        {
+            var console = new MockConsole();
+            var game = new Game(console, new MockRandom(), new MockGameLoop());
+
+            // Move out of spotlight
+            for (int i = 0; i < 5; i++)
+                console.Keys.Enqueue(new ConsoleKeyInfo('\0', ConsoleKey.LeftArrow, false, false, false));
+            game.HandleInput();
+
+            // Lose all 5 lives and go to -1
+            for (int i = 0; i < 6; i++)
+                game.CheckSpotlight(3.0);
+
+            Assert.Equal(-1, game.Lives);
+
+            game.Draw();
+
+            // Should display 0 hearts, 5 spaces
+            Assert.Contains(console.WrittenLines, l => l.Contains("Audience:      "));
+            Assert.DoesNotContain(console.WrittenLines, l => l.Contains("♥"));
         }
     }
 }
